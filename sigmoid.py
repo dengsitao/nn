@@ -67,8 +67,8 @@ print magic, imgNum, imgRow, imgCol
 lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
 print lblMagic, lblNum
 overallError = 0
-for j in range(imgNum):
-#for j in range(10):
+#for j in range(imgNum):
+for j in range(1):
     #read a 28x28 image and a byte label
     X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     y=np.fromfile(labelf, np.uint8, 1)
@@ -83,12 +83,12 @@ for j in range(imgNum):
     #print 'synapse_0= ',synapse_0.shape
     #Forward propagation
     z1=np.dot(X, synapse_0)
-    #f1=sigmoid(z1+bias_0)
-    f1=relu(z1+bias_0)
+    f1=sigmoid(z1+bias_0)
+    #f1=relu(z1+bias_0)
     #print 'f1= ',f1.shape
     #print 'synapse_1= ',synapse_1.shape
     z2=np.dot(f1, synapse_1)
-    f2=relu(z2+bias_1)
+    f2=sigmoid(z2+bias_1)
 
     z3=np.dot(f2, synapse_2)
     f3=sigmoid(z3+bias_2)
@@ -97,21 +97,7 @@ for j in range(imgNum):
     #p3=softmax(f2)
     yy=np.zeros((1, output_dim))
     yy[0,y]=1
-    #print 'yy=', yy
-    #print 'f3=',f3
-    #corect_logprobs = -np.log(f3[range(output_dim),y])
-    #print 'f3=',f3.shape,'corect_logprobs=',corect_logprobs.shape
-    #f3=corect_logprobs
-    #data_loss = np.sum(corect_logprobs)/1
-    #dscores =f3 
-    #dscores[0,y] -= 1
-    
-    #dW = np.dot(X.T, dscores)
-    #db = np.sum(dscores, axis=0, keepdims=True)
-    #pred = np.argmax(f3)
-    #print 'guess = ',pred, 'label = ',y
-    #print 'z2=',z2.shape
-    #print 'f2=',f2.shape
+
     #backward propagation
     error=p3-yy
     #print 'y=',y, 'f3=',f3, 'error=',error
@@ -120,22 +106,23 @@ for j in range(imgNum):
     #print 'gprime=',gprime.shape,'=sigma_deri(f3), f3=',f3.shape
     #error=data_loss
     delta3=error*gprime
-    #print 'delta3=',delta3.shape,'sy_2.T=',synapse_2.T.shape
-    delta2=np.dot(delta3, synapse_2.T)*relu_deri(f2)
-    #print 'delta2=',delta2.shape,'delta3xs2.T,s2.T=',synapse_2.T.shape,'sgder(f2)=',sigm_deri(f2).shape
-    delta1=np.dot(delta2, synapse_1.T)*relu_deri(f1)
-    #print 'delta1=',delta1.shape,'delta2xs1,s1=',synapse_1.T.shape,'sgder(f1)=',sigm_deri(f1).shape
+    print 'delta3=',delta3.shape,'sy_2.T=',synapse_2.T.shape
+    #delta2=np.dot(delta3, synapse_2.T)*sigm_deri(f2)
+    delta2=np.dot(synapse_2.T, delta3)*sigm_deri(f2)
+    print 'delta2=',delta2.shape,'delta3xs2.T,s2.T=',synapse_2.T.shape,'sgder(f2)=',sigm_deri(f2).shape
+    delta1=np.dot(delta2, synapse_1.T)*sigm_deri(f1)
+    print 'delta1=',delta1.shape,'delta2xs1,s1=',synapse_1.T.shape,'sgder(f1)=',sigm_deri(f1).shape
 
-    #print 'delta3=',delta3.shape,'f2.T=',f2.T.shape
-    d2=np.dot(f2.T,delta3)
+    print 'delta3=',delta3.shape,'f2.T=',f2.T.shape
+    d2=np.dot(f2.T,delta3)/output_dim
     dbias_2=delta3
-    #print 'delta2=',delta2.shape,'f2.T=',f2.T.shape,'d2=',d2.shape
+    print 'delta2=',delta2.shape,'f2.T=',f2.T.shape,'d2=',d2.shape
     #print 'delta2=',delta2.shape,'f1.T=',f1.T.shape
-    d1=np.dot(f1.T, delta2)
+    d1=np.dot(f1.T, delta2)/hidden_dim2
     dbias_1=delta2
-    #print 'delta1=',delta1.shape,'f1.T=',f1.T.shape,'d1=',d1.shape
+    print 'delta1=',delta1.shape,'f1.T=',f1.T.shape,'d1=',d1.shape
     #print 'delta1=',delta1.shape,'X.T=',X.T.shape
-    d0=np.dot(X.T, delta1)
+    d0=np.dot(X.T, delta1)/hidden_dim1
     dbias_0=delta1
     #print 'delta1=',delta1.shape,'X=',X.T.shape,'d0=',d0.shape
     synapse_0-=alpha*d0
@@ -151,8 +138,8 @@ for j in range(imgNum):
 
 print 'train finish'
 
-testImagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
-testLabelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
+testImagef = open('/home/rdeng/code/mine/nn/data/t10k-images-idx3-ubyte', 'rb')
+testLabelf = open('/home/rdeng/code/mine/nn/data/t10k-labels-idx1-ubyte', 'rb')
 
 tmagic, timgNum=struct.unpack(">II", testImagef.read(8))
 timgRow, timgCol =struct.unpack(">II", testImagef.read(8))
@@ -162,7 +149,8 @@ print tlblMagic, tlblNum
 #for j in range(imgNum):
 rightSum=0
 wrongSum=0
-for j in range(timgNum):
+#for j in range(timgNum):
+for j in range(1):
     #read a 28x28 image and a byte label
     X=np.fromfile(testImagef, np.uint8, timgRow*timgCol)
     y=np.fromfile(testLabelf, np.uint8, 1)
@@ -177,11 +165,11 @@ for j in range(timgNum):
     #print 'synapse_0= ',synapse_0.shape
     #Forward propagation
     z1=np.dot(X, synapse_0)
-    f1=relu(z1+bias_0)
+    f1=sigmoid(z1+bias_0)
     #print 'f1= ',f1.shape
     #print 'synapse_1= ',synapse_1.shape
     z2=np.dot(f1, synapse_1)
-    f2=relu(z2+bias_1)
+    f2=sigmoid(z2+bias_1)
 
     z3=np.dot(f2, synapse_2)
     f3=sigmoid(z3+bias_2)
