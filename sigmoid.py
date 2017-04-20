@@ -11,11 +11,11 @@ def sigm_deri(output):
     return output*(1-output)
 
 def softmax(x):
-    #e_x = np.exp(x - np.max(x))
-    #return e_x / e_x.sum()
-    exp_scores=np.exp(x)
-    probs=exp_scores/np.sum(exp_scores, axis=1,keepdims=True)
-    return probs
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+    #exp_scores=np.exp(x)
+    #probs=exp_scores/np.sum(exp_scores, axis=1,keepdims=True)
+    #return probs
 
 def softmax_deri(signal):
     J = - signal[..., None] * signal[:, None, :] # off-diagonal Jacobian
@@ -23,6 +23,11 @@ def softmax_deri(signal):
     J[:, iy, ix] = signal * (1. - signal) # diagonal
     return J.sum(axis=1) # sum across-rows for each sample
 
+def relu(x):
+    return np.maximum(x, 0)
+
+def relu_deri(output):
+    return 1.*(output>0)
 def show(image):
     """
     Render a given numpy.uint8 2D array of pixel data.
@@ -53,22 +58,22 @@ bias_0=np.zeros((1, hidden_dim1))
 bias_1=np.zeros((1, hidden_dim2))
 bias_2=np.zeros((1, output_dim))
 
-imagef = open('/home/rdeng/Downloads/data/train-images-idx3-ubyte', 'rb')
-labelf = open('/home/rdeng/Downloads/data/train-labels-idx1-ubyte', 'rb')
+imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
+labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
 
 magic, imgNum=struct.unpack(">II", imagef.read(8))
 imgRow, imgCol =struct.unpack(">II", imagef.read(8))
 print magic, imgNum, imgRow, imgCol
 lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
 print lblMagic, lblNum
-#for j in range(imgNum):
-for j in range(10):
+overallError = 0
+for j in range(imgNum):
+#for j in range(10):
     #read a 28x28 image and a byte label
     X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     y=np.fromfile(labelf, np.uint8, 1)
     # where we'll store our best guess (binary encoded)
     d = np.zeros_like(y)
-    overallError = 0
     #img = X.reshape(imgRow, imgCol)
     #show(img)
     X=X.reshape(1, imgRow*imgCol)
@@ -78,32 +83,47 @@ for j in range(10):
     #print 'synapse_0= ',synapse_0.shape
     #Forward propagation
     z1=np.dot(X, synapse_0)
-    f1=sigmoid(z1+bias_0)
+    #f1=sigmoid(z1+bias_0)
+    f1=relu(z1+bias_0)
     #print 'f1= ',f1.shape
     #print 'synapse_1= ',synapse_1.shape
     z2=np.dot(f1, synapse_1)
-    f2=sigmoid(z2+bias_1)
+    f2=relu(z2+bias_1)
 
     z3=np.dot(f2, synapse_2)
-    #f3=sigmoid(z3+bias_2)
-    f3=softmax(z3)
-    corect_logprobs = -np.log(f3[imgRow*imgCol,y])
-    data_loss = np.sum(corect_logprobs)/imgRow*imgCol
+    f3=sigmoid(z3+bias_2)
+    #p3=-np.log(softmax(f3))
+    p3=softmax(f3)
+    #p3=softmax(f2)
+    yy=np.zeros((1, output_dim))
+    yy[0,y]=1
+    #print 'yy=', yy
+    #print 'f3=',f3
+    #corect_logprobs = -np.log(f3[range(output_dim),y])
+    #print 'f3=',f3.shape,'corect_logprobs=',corect_logprobs.shape
+    #f3=corect_logprobs
+    #data_loss = np.sum(corect_logprobs)/1
+    #dscores =f3 
+    #dscores[0,y] -= 1
+    
+    #dW = np.dot(X.T, dscores)
+    #db = np.sum(dscores, axis=0, keepdims=True)
     #pred = np.argmax(f3)
-    print 'y=',y, 'f3=',f3,'logprobs=',corect_logprobs
     #print 'guess = ',pred, 'label = ',y
     #print 'z2=',z2.shape
     #print 'f2=',f2.shape
     #backward propagation
-    #error=pred-y
-    #gprime=sigm_deri(f3)
-    gprime=softmax_deri(f3)
+    error=p3-yy
+    #print 'y=',y, 'f3=',f3, 'error=',error
+    gprime=sigm_deri(f3)
+    #gprime=softmax_deri(f3)
     #print 'gprime=',gprime.shape,'=sigma_deri(f3), f3=',f3.shape
+    #error=data_loss
     delta3=error*gprime
     #print 'delta3=',delta3.shape,'sy_2.T=',synapse_2.T.shape
-    delta2=np.dot(delta3, synapse_2.T)*sigm_deri(f2)
+    delta2=np.dot(delta3, synapse_2.T)*relu_deri(f2)
     #print 'delta2=',delta2.shape,'delta3xs2.T,s2.T=',synapse_2.T.shape,'sgder(f2)=',sigm_deri(f2).shape
-    delta1=np.dot(delta2, synapse_1.T)*sigm_deri(f1)
+    delta1=np.dot(delta2, synapse_1.T)*relu_deri(f1)
     #print 'delta1=',delta1.shape,'delta2xs1,s1=',synapse_1.T.shape,'sgder(f1)=',sigm_deri(f1).shape
 
     #print 'delta3=',delta3.shape,'f2.T=',f2.T.shape
@@ -126,5 +146,56 @@ for j in range(10):
     bias_2=alpha*dbias_2
     #print 'guess = ',pred, 'label = ',y,' error=',error
 
-    if(j%1000 == 0):
-        print 'error=',error
+    #if(j%1000 == 0):
+    #    print 'error=',error
+
+print 'train finish'
+
+testImagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
+testLabelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
+
+tmagic, timgNum=struct.unpack(">II", testImagef.read(8))
+timgRow, timgCol =struct.unpack(">II", testImagef.read(8))
+print tmagic, timgNum, timgRow, timgCol
+tlblMagic, tlblNum=struct.unpack(">II", testLabelf.read(8))
+print tlblMagic, tlblNum
+#for j in range(imgNum):
+rightSum=0
+wrongSum=0
+for j in range(timgNum):
+    #read a 28x28 image and a byte label
+    X=np.fromfile(testImagef, np.uint8, timgRow*timgCol)
+    y=np.fromfile(testLabelf, np.uint8, 1)
+    # where we'll store our best guess (binary encoded)
+    d = np.zeros_like(y)
+    #img = X.reshape(imgRow, imgCol)
+    #show(img)
+    X=X.reshape(1, imgRow*imgCol)
+    #print 'X= ',X.shape
+    #print 'y=',y
+    #print 'y.shape= ',y.shape, 'y = ', y
+    #print 'synapse_0= ',synapse_0.shape
+    #Forward propagation
+    z1=np.dot(X, synapse_0)
+    f1=relu(z1+bias_0)
+    #print 'f1= ',f1.shape
+    #print 'synapse_1= ',synapse_1.shape
+    z2=np.dot(f1, synapse_1)
+    f2=relu(z2+bias_1)
+
+    z3=np.dot(f2, synapse_2)
+    f3=sigmoid(z3+bias_2)
+    p3=softmax(f3)
+    dd=np.zeros((1, output_dim))
+    indexd=np.argmax(p3)
+    #dd[1,indexd]=1
+    yy=np.zeros((1, output_dim))
+    #yy[0,y]=1
+    if indexd==y:
+        rightSum+=1
+    else:
+        wrongSum+=1
+
+print 'right: ',rightSum,'Wrong: ',wrongSum
+    
+
