@@ -11,8 +11,11 @@ def sigm_deri(output):
     return output*(1-output)
 
 def softmax(x):
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
+    #e_x = np.exp(x - np.max(x))
+    #return e_x / e_x.sum()
+    exp_scores=np.exp(x)
+    probs=exp_scores/np.sum(exp_scores, axis=1,keepdims=True)
+    return probs
 
 def softmax_deri(signal):
     J = - signal[..., None] * signal[:, None, :] # off-diagonal Jacobian
@@ -58,8 +61,8 @@ imgRow, imgCol =struct.unpack(">II", imagef.read(8))
 print magic, imgNum, imgRow, imgCol
 lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
 print lblMagic, lblNum
-for j in range(imgNum):
-#for j in range(10):
+#for j in range(imgNum):
+for j in range(10):
     #read a 28x28 image and a byte label
     X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     y=np.fromfile(labelf, np.uint8, 1)
@@ -84,13 +87,15 @@ for j in range(imgNum):
     z3=np.dot(f2, synapse_2)
     #f3=sigmoid(z3+bias_2)
     f3=softmax(z3)
-    #print 'f3=',f3
-    pred = np.argmax(f3)
+    corect_logprobs = -np.log(f3[imgRow*imgCol,y])
+    data_loss = np.sum(corect_logprobs)/imgRow*imgCol
+    #pred = np.argmax(f3)
+    print 'y=',y, 'f3=',f3,'logprobs=',corect_logprobs
     #print 'guess = ',pred, 'label = ',y
     #print 'z2=',z2.shape
     #print 'f2=',f2.shape
     #backward propagation
-    error=pred-y
+    #error=pred-y
     #gprime=sigm_deri(f3)
     gprime=softmax_deri(f3)
     #print 'gprime=',gprime.shape,'=sigma_deri(f3), f3=',f3.shape
