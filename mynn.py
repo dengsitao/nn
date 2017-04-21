@@ -1,120 +1,216 @@
-import copy, numpy as np
 import struct
+import numpy as np
+import os
+
 np.random.seed(0)
 ## compute sigmoid nonlinearity
 def sigmoid(x):
     output = 1/(1+np.exp(-x))
     return output
 # convert output of sigmoid function to its derivative
-def sigmoid_output_to_derivative(output):
+def sigm_deri(output):
     return output*(1-output)
-# training dataset generation
-#int2binary = {}
-#binary_dim = 8
 
-#largest_number = pow(2,binary_dim)
-#binary = np.unpackbits(
-#    np.array([range(largest_number)],dtype=np.uint8).T,axis=1)
-#for i in range(largest_number):
-#    int2binary[i] = binary[i]
-# input variables
-alpha = 0.1
-input_dim = 28*28 
-hidden_dim = 28*256
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+    #exp_scores=np.exp(x)
+    #probs=exp_scores/np.sum(exp_scores, axis=1,keepdims=True)
+    #return probs
+
+def softmax_deri(signal):
+    J = - signal[..., None] * signal[:, None, :] # off-diagonal Jacobian
+    iy, ix = np.diag_indices_from(J[0])
+    J[:, iy, ix] = signal * (1. - signal) # diagonal
+    return J.sum(axis=1) # sum across-rows for each sample
+
+def relu(x):
+    return np.maximum(x, 0)
+
+def relu_deri(output):
+    return 1.*(output>0)
+def show(image):
+    """
+    Render a given numpy.uint8 2D array of pixel data.
+    """
+    from matplotlib import pyplot
+    import matplotlib as mpl
+    fig = pyplot.figure()
+    ax = fig.add_subplot(1,1,1)
+    imgplot = ax.imshow(image, mpl.cm.Greys)
+    imgplot.set_interpolation('nearest')
+    ax.xaxis.set_ticks_position('top')
+    ax.yaxis.set_ticks_position('left')
+    pyplot.show()
+
+alpha = 0.01
+input_dim = 28*28
+hidden_dim1 = 500
+hidden_dim2 = 100
 output_dim = 10
 # initialize neural network weights
-synapse_0 = 2*np.random.random((input_dim,hidden_dim)) - 1
-synapse_1 = 2*np.random.random((hidden_dim,output_dim)) - 1
-synapse_h = 2*np.random.random((hidden_dim,hidden_dim)) - 1
+synapse_0 = (2*np.random.random((input_dim,hidden_dim1))-1)
+synapse_1 = (2*np.random.random((hidden_dim1,hidden_dim2))-1)
+synapse_2 = (2*np.random.random((hidden_dim2,output_dim)) -1)
+#if os.path.isfile('home/rdeng/code/nn/myparam0'):
+   
+
 synapse_0_update = np.zeros_like(synapse_0)
 synapse_1_update = np.zeros_like(synapse_1)
-synapse_h_update = np.zeros_like(synapse_h)
-bias_0=np.zeros((input_dim, 1))
-bias_h=np.zeros((hidden_dim, 1))
-#dst read mnist file
-imagef = open('/home/rdeng/Downloads/data/train-images-idx3-ubyte', 'rb')
-labelf = open('/home/rdeng/Downloads/data/train-labels-idx1-ubyte', 'rb')
+synapse_2_update = np.zeros_like(synapse_2)
+bias_0=np.zeros((1, hidden_dim1))
+bias_1=np.zeros((1, hidden_dim2))
+bias_2=np.zeros((1, output_dim))
 
-imgMagic, imgNum=struct.unpack(">II", imagef.read(8))
-imgRow, imgCol =struct.unpack(">II", imagef.read(8))
-print imgMagic, imgNum, imgRow, imgCol
-binary_dim=imgRow*imgCol
-lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
+imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
+labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
 
-# training logic
-for j in range(100000):
+for k in range(1):
+    if k>1:
+        imagef.close()
+        labelf.close()
+    imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
+    labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
+    magic, imgNum=struct.unpack(">II", imagef.read(8))
+    imgRow, imgCol =struct.unpack(">II", imagef.read(8))
+    print magic, imgNum, imgRow, imgCol
+    lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
+    print lblMagic, lblNum
+    overallError = 0
+    for j in range(imgNum):
+    #for j in range(1):
+        #read a 28x28 image and a byte label
+        X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
+        y=np.fromfile(labelf, np.uint8, 1)
+        # where we'll store our best guess (binary encoded)
+        d = np.zeros_like(y)
+        #img = X.reshape(imgRow, imgCol)
+        #show(img)
+        X=X.reshape(1, imgRow*imgCol)
+        #print 'X= ',X.shape
+        #print 'y=',y
+        #print 'y.shape= ',y.shape, 'y = ', y
+        #print 'synapse_0= ',synapse_0.shape
+        #Forward propagation
+        z1=np.dot(X, synapse_0)
+        f1=sigmoid(z1+bias_0)
+        #f1=relu(z1+bias_0)
+        #print 'f1= ',f1.shape
+        #print 'synapse_1= ',synapse_1.shape
+        z2=np.dot(f1, synapse_1)
+        f2=sigmoid(z2+bias_1)
     
-    #read a 28x28 image and a byte label
-    X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
-    y=np.fromfile(labelf, np.uint8, 1)
-    # where we'll store our best guess (binary encoded)
-    d = np.zeros_like(y)
-    overallError = 0 
+        z3=np.dot(f2, synapse_2)
+        f3=sigmoid(z3+bias_2)
+        #p3=-np.log(softmax(f3))
+        p3=softmax(f3)
+        #p3=softmax(f2)
+        yy=np.zeros((1, output_dim))
+        yy[0,y]=1
+        if j%6000==0:
+            print 'predict=',p3
     
-    z1=np.dot(X, synapse_0)+bias_0
-    f1=sigmoid(z1)
+        #backward propagation
+        error=p3-yy
+        overallError+=np.sum(np.abs(error))
+        #print 'y=',y, 'f3=',f3, 'error=',error
+        gprime=sigm_deri(f3)
+        #gprime=softmax_deri(f3)
+        #print 'gprime=',gprime.shape,'=sigma_deri(f3), f3=',f3.shape
+        #error=data_loss
+        delta3=error*gprime
+        #print 'delta3=',delta3.shape,'sy_2.T=',synapse_2.T.shape
+        delta2=np.dot(delta3, synapse_2.T)*sigm_deri(f2)
+        #delta2=np.dot(synapse_2.T, delta3)*sigm_deri(f2)
+        #print 'delta2=',delta2.shape,'delta3xs2.T,s2.T=',synapse_2.T.shape,'sgder(f2)=',sigm_deri(f2).shape
+        delta1=np.dot(delta2, synapse_1.T)*sigm_deri(f1)
+        #print 'delta1=',delta1.shape,'delta2xs1,s1=',synapse_1.T.shape,'sgder(f1)=',sigm_deri(f1).shape
     
-    layer_2_deltas = list() 
-    layer_1_values = list() 
-    layer_1_values.append(np.zeros(hidden_dim)) 
+        #print 'delta3=',delta3.shape,'f2.T=',f2.T.shape
+        #print 'delta3.T=',delta3.T.shape,'f2=',f2.shape
+        #d2=np.dot(f2.T,delta3)/output_dim
+        d2=np.dot(delta3.T, f2)
+        dbias_2=delta3
+        #print 'delta2=',delta2.shape,'f2.T=',f2.T.shape,'d2=',d2.shape
+        #print 'delta2=',delta2.shape,'f1.T=',f1.T.shape
+        #d1=np.dot(f1.T, delta2)/hidden_dim2
+        d1=np.dot(delta2.T, f1)
+        dbias_1=delta2
+        #print 'delta1=',delta1.shape,'f1.T=',f1.T.shape,'d1=',d1.shape
+        #print 'delta1=',delta1.shape,'X.T=',X.T.shape
+        d0=np.dot(delta1.T, X)
+        dbias_0=delta1
+        #print 'delta1=',delta1.shape,'X=',X.T.shape,'d0=',d0.shape
+        #print 'synapse_0=',synapse_0.shape,'d0=',d0.shape
+        synapse_0-=alpha*d0.T
+        synapse_1-=alpha*d1.T
+        synapse_2-=alpha*d2.T
+        bias_0-=alpha*dbias_0
+        bias_1=alpha*dbias_1
+        bias_2=alpha*dbias_2
+        #print 'guess = ',pred, 'label = ',y,' error=',error
     
-    # moving along the positions in the binary encoding
-    #for position in range(binar_dim):
-        
-        # generate input and output
-        #X = np.array([[a[binary_dim - position - 1],b[binary_dim - position - 1]]])
-        #y = np.array([[c[binary_dim - position - 1]]]).T
-        # hidden layer (input ~+ prev_hidden)
-        layer_1 = sigmoid(np.dot(X,synapse_0) + np.dot(layer_1_values[-1],synapse_h))
-        # output layer (new binary representation)
-        layer_2 = sigmoid(np.dot(layer_1,synapse_1))
-        # did we miss?... if so, by how much?
-        layer_2_error = y - layer_2 
-        layer_2_deltas.append((layer_2_error)*sigmoid_output_to_derivative(layer_2)) 
-        overallError += np.abs(layer_2_error[0])
+        #if(j%1000 == 0):
+    print 'overallerror=',overallError
     
-        # decode estimate so we can print it out
-    d[binary_dim - position - 1] = np.round(layer_2[0][0])
-        
-        # store hidden layer so we can use it in the next timestep
-    layer_1_values.append(copy.deepcopy(layer_1))
-    
-    future_layer_1_delta = np.zeros(hidden_dim)
-    
-    for position in range(binary_dim):
-        
-        X = np.array([[a[position],b[position]]]) 
-        layer_1 = layer_1_values[-position-1] 
-        prev_layer_1 = layer_1_values[-position-2] 
-      
-        # error at output layer
-        layer_2_delta = layer_2_deltas[-position-1] 
-        # error at hidden layer
-        layer_1_delta = (future_layer_1_delta.dot(synapse_h.T) + layer_2_delta.dot(synapse_1.T)) * sigmoid_output_to_derivative(layer_1)
-        # let's update all our weights so we can try again
-        synapse_1_update += np.atleast_2d(layer_1).T.dot(layer_2_delta)
-        synapse_h_update += np.atleast_2d(prev_layer_1).T.dot(layer_1_delta)
-        synapse_0_update += X.T.dot(layer_1_delta)
-        
-    future_layer_1_delta = layer_1_delta
-    
-    synapse_0 += synapse_0_update * alpha
-    synapse_1 += synapse_1_update * alpha
-    synapse_h += synapse_h_update * alpha
-    synapse_0_update *= 0
-    synapse_1_update *= 0
-    synapse_h_update *= 0
-    
-    # print out progress
-    if(j % 1000 == 0):
-        print("Error:" + str(overallError))
-        print("Pred:" + str(d))
-        print("True:" + str(c))
-        out = 0
-        for index,x in enumerate(reversed(d)):
-            out += x*pow(2,index)
-        print(str(a_int) + " + " + str(b_int) + " = " + str(out))
-        print("------------")
+
+print 'train finish'
 
 imagef.close()
 labelf.close()
+#recordf_0 = open('/home/rdeng/code/mine/nn/myparam0', 'wb')
+#recordf_1 = open('/home/rdeng/code/mine/nn/myparam1', 'wb')
+#recordf_2 = open('/home/rdeng/code/mine/nn/myparam2', 'wb')
+#synapse_0.tofile(recordf_0)
+#synapse_1.tofile(recordf_1)
+#synapse_2.tofile(recordf_2)
+
+testImagef = open('/home/rdeng/code/mine/nn/data/t10k-images-idx3-ubyte', 'rb')
+testLabelf = open('/home/rdeng/code/mine/nn/data/t10k-labels-idx1-ubyte', 'rb')
+
+tmagic, timgNum=struct.unpack(">II", testImagef.read(8))
+timgRow, timgCol =struct.unpack(">II", testImagef.read(8))
+print tmagic, timgNum, timgRow, timgCol
+tlblMagic, tlblNum=struct.unpack(">II", testLabelf.read(8))
+print tlblMagic, tlblNum
+#for j in range(imgNum):
+rightSum=0
+wrongSum=0
+for j in range(timgNum):
+#for j in range(1):
+    #read a 28x28 image and a byte label
+    X=np.fromfile(testImagef, np.uint8, timgRow*timgCol)
+    y=np.fromfile(testLabelf, np.uint8, 1)
+    # where we'll store our best guess (binary encoded)
+    d = np.zeros_like(y)
+    #img = X.reshape(imgRow, imgCol)
+    #show(img)
+    X=X.reshape(1, imgRow*imgCol)
+    #print 'X= ',X.shape
+    #print 'y=',y
+    #print 'y.shape= ',y.shape, 'y = ', y
+    #print 'synapse_0= ',synapse_0.shape
+    #Forward propagation
+    z1=np.dot(X, synapse_0)
+    f1=sigmoid(z1+bias_0)
+    #print 'f1= ',f1.shape
+    #print 'synapse_1= ',synapse_1.shape
+    z2=np.dot(f1, synapse_1)
+    f2=sigmoid(z2+bias_1)
+
+    z3=np.dot(f2, synapse_2)
+    f3=sigmoid(z3+bias_2)
+    p3=softmax(f3)
+    dd=np.zeros((1, output_dim))
+    indexd=np.argmax(p3)
+    #dd[1,indexd]=1
+    yy=np.zeros((1, output_dim))
+    #yy[0,y]=1
+    if indexd==y:
+        rightSum+=1
+    else:
+        wrongSum+=1
+
+print 'right: ',rightSum,'Wrong: ',wrongSum
+    
+
