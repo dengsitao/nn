@@ -2,11 +2,12 @@ import struct
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 np.random.seed(0)
 ## compute sigmoid nonlinearity
 def sigmoid(x):
-    output = 1/(1+np.exp(-x))
+    output = 1.0/(1.0+np.exp(-x))
     return output
 # convert output of sigmoid function to its derivative
 def sigm_deri(output):
@@ -31,32 +32,43 @@ def relu(x):
 def relu_deri(output):
     return 1.*(output>0)
 
-def costFunc(h, y):
-    m=h.shape[0]
-    return np.sum(pow((h-y),2))/m
 
-def costFuncReg(self, h, y):
-    cost=self.costFunc(h, y)
-    return cost #+ ((self.lda/2)*(np.sum(pow(self.ih,2)) + np.sum(pow(self.ho,2))))
+def showImg(image):
+    """
+    Render a given numpy.uint8 2D array of pixel data.
+    """
+    #from matplotlib import pyplot
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    imgplot = ax.imshow(image, mpl.cm.Greys)
+    imgplot.set_interpolation('nearest')
+    ax.xaxis.set_ticks_position('top')
+    ax.yaxis.set_ticks_position('left')
+    plt.show()
 
-alpha = 0.03
+alpha = 0.3
 lamda = 0.1#alpha*alpha
 input_dim = 28*28
-hidden_dim1 = 500
-hidden_dim2 = 100
+hidden_dim1 = 300
+#hidden_dim2 = 100
 output_dim = 10
 # initialize neural network weights
-weight0 = (2*np.random.random((input_dim+1,hidden_dim1))-1)
-weight1 = (2*np.random.random((hidden_dim1+1,hidden_dim2))-1)
-weight2 = (2*np.random.random((hidden_dim2+1,output_dim)) -1)
-bias_0=np.zeros((1, hidden_dim1))
-bias_1=np.zeros((1, hidden_dim2))
+weight1 = np.random.uniform(-0.1,0.1,(input_dim+1,hidden_dim1))
+weight2 = np.random.uniform(-0.1,0.1,(hidden_dim1+1,output_dim))
+#for i in range(785):
+#    weight1[i,:]=-0.1+i*0.0003
+#for i in range(301):
+#    weight2[i,:]=-0.1+i*0.004
+
+#print 'weight1=',weight1
+#print 'weight2=',weight2
+#weight2 = (2*np.random.random((hidden_dim2+1,output_dim)) -1)
+bias_1=np.zeros((1, hidden_dim1))
 bias_2=np.zeros((1, output_dim))
-d0=np.zeros(weight0.shape)
+#bias_2=np.zeros((1, output_dim))
 d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
-#imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
-#labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
+#d2=np.zeros(weight2.shape)
 
 imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
 labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
@@ -72,6 +84,18 @@ print '----start read data----'
 for i in range(imgNum):
     Xa[i, range(imgRow*imgCol)]=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     Ya[i, 0]=np.fromfile(labelf, np.uint8, 1)
+Xa=sigmoid(Xa)
+
+for i in range(0):
+    img=Xa[i].reshape(imgRow, imgCol)
+    showImg(img)
+    print 'y=',Ya[i]
+#img=Xa[1].reshape(imgRow, imgCol)
+#showImg(img)
+#print 'y=',Ya[1]
+#img=Xa[2].reshape(imgRow, imgCol)
+#showImg(img)
+#print 'y=',Ya[2]
 
 print '----finish read data----'
 valiNum=10000
@@ -82,85 +106,70 @@ for k in range(3):
     for j in range(loop):
         X=Xa[j]
         X=X.reshape(1,imgRow*imgCol)
-        X=np.c_[[1],X]
+        a1=np.c_[[1],X]
         y=Ya[j]
-        #print 'y=',y,'y[0]=',y[0]
         #Forward propagation
-        z1=np.dot(X, weight0)
-        f1=sigmoid(z1)#+bias_0)
-        f1=np.c_[[1], f1]
-        z2=np.dot(f1, weight1)
-        f2=sigmoid(z2)#+bias_1)
-        f2=np.c_[[1],f2] 
-        #print 'weight2=',weight2.shape,'f2=',f2.shape
-        z3=np.dot(f2, weight2)
-        f3=sigmoid(z3)#+bias_2)
-        sumf3=np.sum(f3)
-        #print 'sumf3',sumf3
-        p3=softmax(f3)
-        yy=np.zeros((1, output_dim))
-        yy[0,y[0]]=sumf3
+        z1=np.dot(a1, weight1)
+	#print 'X=',X
+	#z1=np.asmatrix(a1)*weight1
+        a2=sigmoid(z1)#+bias_0)
+        #print 'a2=',a2
+        a21=np.c_[[1], a2]
+        z3=np.dot(a21, weight2)
+        a3=sigmoid(z3)#+bias_1)
+        #print 'a3=',a3
+        suma3=np.sum(np.abs(a3))
+        #p3=softmax(f3)
+        yy=np.zeros((1, output_dim))+0.1
+        yy[0,y[0]]=0.9
     
         #backward propagation
-        error=pow(f3-yy,2)/2
-        #error=costFunc(p3, yy)
-        #print 'eroor=',error
-        overallError+=np.sum(np.abs(error))
-        errordot[j]=np.sum(error)
+        error=yy-a3
+        errordot[j]=suma3
     
-        gprime=sigm_deri(f3)
-        delta3=error#*gprime
+        gprime=sigm_deri(a3)
         #print 'delta3=',delta3.shape,'weight2.T=',weight2.T.shape,'f2=',f2.shape
-        delta2=np.dot(delta3, weight2.T)*sigm_deri(f2)
-        delta2=delta2[0,1:]
-        delta2=delta2.reshape(1, hidden_dim2)
-        #print 'delta2=',delta2.shape,'weight1.T=',weight1.T.shape,'f1=',f2.shape
-        delta1=np.dot(delta2, weight1.T)*sigm_deri(f1)
+        delta3=error*gprime#np.dot(delta3, weight2.T)*sigm_deri(f2)
+        w2=weight2[1:,:]
+        w2=w2.reshape(hidden_dim1, output_dim)
+        #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
+        delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
+        #print 'delta2=',delta2.shape,'weight2.T=',weight2.T.shape,'a3=',a3.shape
+        #delta1=np.dot(delta2, weight1.T)*sigm_deri(a2)
         #print 'd2=',d2.shape,'delta3.T=',delta3.T.shape,'f2=',f2.shape
-        delta1=delta1[0,1:]
-        delta1=delta1.reshape(1, hidden_dim1)
-        d2+=np.dot(delta3.T, f2).T
-        dbias_2=delta3
-        d1+=np.dot(delta2.T, f1).T
-        dbias_1=delta2
-        #print 'd0=',d0.shape, 'delta1.T=',delta1.T.shape,'X=', X.shape
-        d0+=np.dot(delta1.T, X).T
-        dbias_0=delta1
-        weight0-=alpha*(d0+lamda*weight0)/hidden_dim1
-        weight1-=alpha*(d1+lamda*weight1)/hidden_dim2
-        weight2-=alpha*(d2+lamda*weight2)/output_dim
-        bias_0-=alpha*dbias_0/hidden_dim1
-        bias_1-=alpha*dbias_1/hidden_dim2
-        bias_2-=alpha*dbias_2/output_dim
+        #print 'weight2=',weight2.shape,'d2=',d2.shape,'delta3.T=',delta3.T.shape,'a2=', a2.shape
+        d2=np.dot(delta3.T, a21).T
+        #dbias_1=delta2
+        #print 'weight1=',weight1.shape,'d1=',d1.shape,'delta2.T=',delta2.T.shape,'a1=', a1.shape
+        #delta2=delta2[:,1:]
+        #delta2=delta2.reshape(1, hidden_dim1)
+        d1=np.dot(delta2.T, a1).T
+        weight1+=alpha*(d1)#+lamda*weight1)
+        weight2+=alpha*(d2)#+lamda*weight2)
     print '----train: ',k,' finish----'
     rightSum=0
     wrongSum=0
     for j in range(valiNum):
     #for j in range(1):
         #read a 28x28 image and a byte label
-        #X=np.fromfile(imagef, np.uint8, imgRow*imgCol)
-        #y=np.fromfile(labelf, np.uint8, 1)
-        X=Xa[j]
+        X=Xa[j+imgNum-valiNum]
         X=X.reshape(1,imgRow*imgCol)
-        X=np.c_[[1],X]
-        y=Ya[j]
+        a1=np.c_[[1],X]
+        y=Ya[j+imgNum-valiNum]
+
+        #img=X.reshape(imgRow, imgCol)
+        #showImg(img)
+        #print 'v y=',y
         # where we'll store our best guess (binary encoded)
-        d = np.zeros_like(y)
         #Forward propagation
-        z1=np.dot(X, weight0)
-        f1=sigmoid(z1+bias_0)
-        f1=np.c_[[1],f1]
-        z2=np.dot(f1, weight1)
-        f2=sigmoid(z2+bias_1)
-        f2=np.c_[[1],f2]
-    
-        z3=np.dot(f2, weight2)
-        f3=sigmoid(z3+bias_2)
-        p3=softmax(f3)
-        dd=np.zeros((1, output_dim))
-        indexd=np.argmax(p3)
-        yy=np.zeros((1, output_dim))
-        if indexd==y[0]:
+        z1=np.dot(a1, weight1)
+        a2=sigmoid(z1)#+bias_0)
+        a2=np.c_[[1], a2]
+        z3=np.dot(a2, weight2)
+        a3=sigmoid(z3)#+bias_1)
+        suma3=np.sum(np.abs(a3))
+        indexd=np.argmax(a3)
+        if indexd==y:
             rightSum+=1
         else:
             wrongSum+=1
@@ -200,24 +209,26 @@ for j in range(timgNum):
     X=np.fromfile(testImagef, np.uint8, timgRow*timgCol)
     y=np.fromfile(testLabelf, np.uint8, 1)
     # where we'll store our best guess (binary encoded)
-    d = np.zeros_like(y)
-    X=X.reshape(1, imgRow*imgCol)
-    X=np.c_[[1],X]
-    
-    #Forward propagation
-    z1=np.dot(X, weight0)
-    f1=sigmoid(z1+bias_0)
-    f1=np.c_[[1],f1]
-    z2=np.dot(f1, weight1)
-    f2=sigmoid(z2+bias_1)
-    f2=np.c_[[1],f2]
+    X=Xa[j]
+    X=X.reshape(1,imgRow*imgCol)
+    a1=np.c_[[1],X]
+    y=Ya[j]
 
-    z3=np.dot(f2, weight2)
-    f3=sigmoid(z3+bias_2)
-    p3=softmax(f3)
-    dd=np.zeros((1, output_dim))
-    indexd=np.argmax(p3)
-    yy=np.zeros((1, output_dim))
+    # where we'll store our best guess (binary encoded)
+    #Forward propagation
+    z1=np.dot(a1, weight1)
+    a2=sigmoid(z1)#+bias_0)
+    a2=np.c_[[1], a2]
+    z3=np.dot(a2, weight2)
+    a3=sigmoid(z3)#+bias_1)
+    suma3=np.sum(np.abs(a3))
+    indexd=np.argmax(a3)
+
+    #img=X.reshape(imgRow,imgCol)
+    #showImg(img)
+
+    #print 't y=',y,'pred=',indexd
+
     if indexd==y:
         rightSum+=1
     else:
