@@ -46,7 +46,7 @@ def showImg(image):
     ax.yaxis.set_ticks_position('left')
     plt.show()
 
-alpha = 0.3
+alpha = 0.05
 lamda = 0.1#alpha*alpha
 input_dim = 28*28
 hidden_dim1 = 300
@@ -84,7 +84,9 @@ print '----start read data----'
 for i in range(imgNum):
     Xa[i, range(imgRow*imgCol)]=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     Ya[i, 0]=np.fromfile(labelf, np.uint8, 1)
-Xa=sigmoid(Xa)
+#Xa=sigmoid(Xa)
+#mXa=np.sum(Xa)
+#Xa=Xa/mXa
 
 for i in range(0):
     img=Xa[i].reshape(imgRow, imgCol)
@@ -102,16 +104,20 @@ valiNum=10000
 loop=imgNum-valiNum
 errordot=np.zeros((loop,1))
 
-for k in range(3):
+for k in range(30):
     for j in range(loop):
         X=Xa[j]
         X=X.reshape(1,imgRow*imgCol)
+        #normalize
+        mXa=np.max(X)
+        X=X/mXa
         a1=np.c_[[1],X]
         y=Ya[j]
         #Forward propagation
         z1=np.dot(a1, weight1)
-	#print 'X=',X
-	#z1=np.asmatrix(a1)*weight1
+    	#print 'X=',X
+	    #z1=np.asmatrix(a1)*weight1
+        #a2=relu(z1)#+bias_0)
         a2=sigmoid(z1)#+bias_0)
         #print 'a2=',a2
         a21=np.c_[[1], a2]
@@ -120,8 +126,8 @@ for k in range(3):
         #print 'a3=',a3
         suma3=np.sum(np.abs(a3))
         #p3=softmax(f3)
-        yy=np.zeros((1, output_dim))+0.1
-        yy[0,y[0]]=0.9
+        yy=np.zeros((1, output_dim))+0.01
+        yy[0,y[0]]=0.99
     
         #backward propagation
         error=yy-a3
@@ -133,6 +139,7 @@ for k in range(3):
         w2=weight2[1:,:]
         w2=w2.reshape(hidden_dim1, output_dim)
         #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
+        #delta2=np.dot(delta3, w2.T)*relu_deri(a2)
         delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
         #print 'delta2=',delta2.shape,'weight2.T=',weight2.T.shape,'a3=',a3.shape
         #delta1=np.dot(delta2, weight1.T)*sigm_deri(a2)
@@ -144,8 +151,8 @@ for k in range(3):
         #delta2=delta2[:,1:]
         #delta2=delta2.reshape(1, hidden_dim1)
         d1=np.dot(delta2.T, a1).T
-        weight1+=alpha*(d1)#+lamda*weight1)
-        weight2+=alpha*(d2)#+lamda*weight2)
+        weight1+=alpha*(d1)
+        weight2+=alpha*(d2)
     print '----train: ',k,' finish----'
     rightSum=0
     wrongSum=0
