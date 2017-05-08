@@ -3,6 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import math
 
 np.random.seed(0)
 ## compute sigmoid nonlinearity
@@ -46,7 +47,7 @@ def showImg(image):
     ax.yaxis.set_ticks_position('left')
     plt.show()
 
-alpha = 0.001
+alpha = 0.003
 lamda = 0.1#alpha*alpha
 input_dim = 28*28
 hidden_dim1 = 300
@@ -98,6 +99,8 @@ for i in range(0):
 #img=Xa[2].reshape(imgRow, imgCol)
 #showImg(img)
 #print 'y=',Ya[2]
+imagef.close()
+labelf.close()
 
 print '----finish read data----'
 valiNum=10000
@@ -105,6 +108,7 @@ loop=imgNum-valiNum
 errordot=np.zeros((loop,1))
 
 for k in range(30):
+    overallError=0
     for j in range(loop):
         X=Xa[j]
         X=X.reshape(1,imgRow*imgCol)
@@ -124,17 +128,18 @@ for k in range(30):
 	#print 'a3=',a3
 	#print 'suma3=',suma3
         p3=softmax(z3)
-        yy=np.zeros((1, output_dim))+0.1/9
-        yy[0,y[0]]=0.9
-        #yy=np.zeros((1, output_dim))
-        #yy[0.0,y[0]]=1.0
+        #yy=np.zeros((1, output_dim))+0.1/9
+        #yy[0,y[0]]=0.9
+        yy=np.zeros((1, output_dim))
+        yy[0.0,y[0]]=1.0
     
         #backward propagation
 	#error=pow(a3-yy,2)/2
         #error=yy-p3
-        error=a3-yy
-	#error=yy-p3
-        errordot[j]=suma3
+        #error=a3-yy
+        error=p3-yy
+        errordot[j]=-math.log(p3[0, y[0]])
+        overallError+=errordot[j]
 	#gprime=softmax_deri(p3)
 	#delta4=error*gprime
     
@@ -144,7 +149,7 @@ for k in range(30):
         w2=weight2[1:,:]
         w2=w2.reshape(hidden_dim1, output_dim)
         #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
-        delta2=np.dot(delta3, w2.T)#*sigm_deri(a2)
+        delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
         #print 'delta2=',delta2.shape,'weight2.T=',weight2.T.shape,'a3=',a3.shape
         #delta1=np.dot(delta2, weight1.T)*sigm_deri(a2)
         #print 'd2=',d2.shape,'delta3.T=',delta3.T.shape,'f2=',f2.shape
@@ -160,6 +165,7 @@ for k in range(30):
         weight1-=alpha*(d1)#+lamda*weight1)
         weight2-=alpha*(d2)#+lamda*weight2)
     print '----train: ',k,' finish----'
+    print 'overallerror=',overallError
     rightSum=0
     wrongSum=0
     for j in range(valiNum):
@@ -181,7 +187,7 @@ for k in range(30):
         z3=np.dot(a2, weight2)
         #a3=sigmoid(z3)#+bias_1)
         #suma3=np.sum(np.abs(a3))
-	a3=softmax(z3)
+        a3=softmax(z3)
         indexd=np.argmax(a3)
         if indexd==y:
             rightSum+=1
@@ -189,9 +195,9 @@ for k in range(30):
             wrongSum+=1
     
     print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum
-    imagef.close()
-    labelf.close()
-print 'overallerror=',overallError
+    #plt.plot(range(loop), errordot, "o")
+    #plt.show()
+#print 'overallerror=',overallError
 #plt.plot(range(loop), errordot, "o")
 #plt.show()
   
@@ -207,26 +213,32 @@ labelf.close()
 #weight1.tofile(recordf_1)
 #weight2.tofile(recordf_2)
 
-testImagef = open('/home/rdeng/code/mine/nn/data/t10k-images-idx3-ubyte', 'rb')
-testLabelf = open('/home/rdeng/code/mine/nn/data/t10k-labels-idx1-ubyte', 'rb')
+timagef = open('/home/rdeng/code/mine/nn/data/t10k-images-idx3-ubyte', 'rb')
+tlabelf = open('/home/rdeng/code/mine/nn/data/t10k-labels-idx1-ubyte', 'rb')
 
-tmagic, timgNum=struct.unpack(">II", testImagef.read(8))
-timgRow, timgCol =struct.unpack(">II", testImagef.read(8))
+tmagic, timgNum=struct.unpack(">II", timagef.read(8))
+timgRow, timgCol =struct.unpack(">II", timagef.read(8))
 print tmagic, timgNum, timgRow, timgCol
-tlblMagic, tlblNum=struct.unpack(">II", testLabelf.read(8))
+tlblMagic, tlblNum=struct.unpack(">II", tlabelf.read(8))
 print tlblMagic, tlblNum
+
+Xt=np.zeros((timgNum, timgRow*imgCol))
+Yt=np.zeros((tlblNum, 1))
+print '----start read data----'
+for i in range(timgNum):
+    Xt[i, range(timgRow*timgCol)]=np.fromfile(timagef, np.uint8, timgRow*timgCol)
+    Yt[i, 0]=np.fromfile(tlabelf, np.uint8, 1)
+Xt=sigmoid(Xt)
 rightSum=0
 wrongSum=0
 for j in range(timgNum):
 #for j in range(1):
     #read a 28x28 image and a byte label
-    X=np.fromfile(testImagef, np.uint8, timgRow*timgCol)
-    y=np.fromfile(testLabelf, np.uint8, 1)
     # where we'll store our best guess (binary encoded)
-    X=X[j]
-    X=X.reshape(1,imgRow*imgCol)
+    X=Xt[j]
+    X=X.reshape(1,timgRow*timgCol)
     a1=np.c_[[1],X]
-    y=Ya[j]
+    y=Yt[j]
 
     # where we'll store our best guess (binary encoded)
     #Forward propagation
