@@ -87,7 +87,9 @@ print '----start read data----'
 for i in range(imgNum):
     Xa[i, range(imgRow*imgCol)]=np.fromfile(imagef, np.uint8, imgRow*imgCol)
     Ya[i, 0]=np.fromfile(labelf, np.uint8, 1)
-Xa=sigmoid(Xa)
+#Xa=sigmoid(Xa)
+#Xa=Xa/255
+Xa=(Xa-np.mean(Xa))/np.std(Xa)
 
 for i in range(0):
     img=Xa[i].reshape(imgRow, imgCol)
@@ -195,6 +197,8 @@ for k in range(30):
             wrongSum+=1
     
     print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum
+    if (rightSum/valiNum > 0.95):
+        break
     #plt.plot(range(loop), errordot, "o")
     #plt.show()
 #print 'overallerror=',overallError
@@ -228,7 +232,8 @@ print '----start read data----'
 for i in range(timgNum):
     Xt[i, range(timgRow*timgCol)]=np.fromfile(timagef, np.uint8, timgRow*timgCol)
     Yt[i, 0]=np.fromfile(tlabelf, np.uint8, 1)
-Xt=sigmoid(Xt)
+#Xt=sigmoid(Xt)
+Xt=(Xt-np.mean(Xt))/np.std(Xt)
 rightSum=0
 wrongSum=0
 for j in range(timgNum):
