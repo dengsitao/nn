@@ -70,8 +70,8 @@ d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
 #d2=np.zeros(weight2.shape)
 
-imagef = open('/home/rdeng/code/mine/nn/data/train-images-idx3-ubyte', 'rb')
-labelf = open('/home/rdeng/code/mine/nn/data/train-labels-idx1-ubyte', 'rb')
+imagef = open('./data/train-images-idx3-ubyte', 'rb')
+labelf = open('./data/train-labels-idx1-ubyte', 'rb')
 magic, imgNum=struct.unpack(">II", imagef.read(8))
 imgRow, imgCol =struct.unpack(">II", imagef.read(8))
 print magic, imgNum, imgRow, imgCol
@@ -200,8 +200,8 @@ labelf.close()
 #weight1.tofile(recordf_1)
 #weight2.tofile(recordf_2)
 
-testImagef = open('/home/rdeng/code/mine/nn/data/t10k-images-idx3-ubyte', 'rb')
-testLabelf = open('/home/rdeng/code/mine/nn/data/t10k-labels-idx1-ubyte', 'rb')
+testImagef = open('./data/t10k-images-idx3-ubyte', 'rb')
+testLabelf = open('./data/t10k-labels-idx1-ubyte', 'rb')
 
 tmagic, timgNum=struct.unpack(">II", testImagef.read(8))
 timgRow, timgCol =struct.unpack(">II", testImagef.read(8))
