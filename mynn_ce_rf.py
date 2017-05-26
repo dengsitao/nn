@@ -82,6 +82,26 @@ def predict(Xi, Yi, weight1, weight2):
     print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, accuracy, '%'
     return accuracy
 
+def loadImgData(imgfile, imgNum, count, offset):
+    if count > imgNum:
+        print 'count=',count,' > ','imgNum=', imgNum
+        count=imgNum
+    Xa=np.zeros((count, imgRow*imgCol))
+    imgfile.seek(offset*imgRow*imgCol+16)
+    for i in range(count):
+        Xa[i, range(imgRow*imgCol)]=np.fromfile(imgfile, np.uint8, imgRow*imgCol)
+    return Xa
+
+def loadLabelData(lblfile, imgNum, count, offset):
+    
+    if count > lblNum:
+        print 'count=',count,' > ','lblNum=', lblNum
+        count=imgNum
+    Ya=np.zeros((count, 1))
+    lblfile.seek(offset+8)
+    for i in range(count):
+        Ya[i, 0]=np.fromfile(lblfile, np.uint8, 1)
+    return Ya
 
 alpha = 0.003
 lamda = 0.1#alpha*alpha
@@ -92,16 +112,7 @@ output_dim = 10
 # initialize neural network weights
 weight1 = np.random.uniform(-0.1,0.1,(input_dim+1,hidden_dim1))
 weight2 = np.random.uniform(-0.1,0.1,(hidden_dim1+1,output_dim))
-#imgw=weight1.reshape(1, (input_dim+1)*hidden_dim1)
-#showImg(imgw)
-#for i in range(785):
-#    weight1[i,:]=-0.1+i*0.0003
-#for i in range(301):
-#    weight2[i,:]=-0.1+i*0.004
 
-#print 'weight1=',weight1
-#print 'weight2=',weight2
-#weight2 = (2*np.random.random((hidden_dim2+1,output_dim)) -1)
 bias_1=np.zeros((1, hidden_dim1))
 bias_2=np.zeros((1, output_dim))
 #bias_2=np.zeros((1, output_dim))
@@ -109,52 +120,39 @@ d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
 #d2=np.zeros(weight2.shape)
 
-imagef = open('./data/train-images-idx3-ubyte', 'rb')
-labelf = open('./data/train-labels-idx1-ubyte', 'rb')
-magic, imgNum=struct.unpack(">II", imagef.read(8))
-imgRow, imgCol =struct.unpack(">II", imagef.read(8))
-print magic, imgNum, imgRow, imgCol
-lblMagic, lblNum=struct.unpack(">II", labelf.read(8))
-print lblMagic, lblNum
-overallError = 0
-valiNum=10000
-trainNum=imgNum-valiNum
-Xa=np.zeros((trainNum, imgRow*imgCol))
-Ya=np.zeros((trainNum, 1))
-Xv=np.zeros((valiNum, imgRow*imgCol))
-Yv=np.zeros((valiNum, 1))
-print '----start read data----'
-for i in range(trainNum):
-    Xa[i, range(imgRow*imgCol)]=np.fromfile(imagef, np.uint8, imgRow*imgCol)
-    Ya[i, 0]=np.fromfile(labelf, np.uint8, 1)
-for i in range(valiNum):
-    Xv[i, range(imgRow*imgCol)]=np.fromfile(imagef, np.uint8, imgRow*imgCol)
-    Yv[i, 0]=np.fromfile(labelf, np.uint8, 1)
 #Xa=sigmoid(Xa)
 #Xa=Xa/255
 #Xa=(Xa-np.mean(Xa))/np.std(Xa)
+imgfile = open('./data/train-images-idx3-ubyte', 'rb')
+magic, imgNum, imgRow, imgCol = struct.unpack(">IIII", imgfile.read(16))
+print 'Image File: magic=', magic, 'imgNum=', imgNum, 'imgRow=', imgRow, 'imgCol=', imgCol
+lblfile = open('./data/train-labels-idx1-ubyte', 'rb')
+magic, lblNum = struct.unpack(">II", lblfile.read(8))
+print 'Label File: magic=', magic, 'lblNum=', lblNum
+
+valiNum=10000
+trainNum=imgNum-valiNum
+Xa=loadImgData(imgfile, imgNum, trainNum, 0)
+Ya=loadLabelData(lblfile, lblNum, trainNum, 0)
+Xv=loadImgData(imgfile, imgNum, valiNum, trainNum)
+Yv=loadLabelData(lblfile, lblNum, valiNum, trainNum)
+imgfile.close()
+lblfile.close()
+#for i in range(10):
+    #img=Xa[i].reshape(imgRow, imgCol)
+    #showImg(img)
+    #print 'Ya[',i,']=', Ya[i]
 Xa=normalize(Xa)
 Xv=normalize(Xv)
 
-for i in range(0):
-    img=Xa[i].reshape(imgRow, imgCol)
-    showImg(img)
-    print 'y=',Ya[i]
-#img=Xa[1].reshape(imgRow, imgCol)
-#showImg(img)
-#print 'y=',Ya[1]
-#img=Xa[2].reshape(imgRow, imgCol)
-#showImg(img)
-#print 'y=',Ya[2]
-imagef.close()
-labelf.close()
+
 
 print '----finish read data----'
-
+epoch=3
 loop=imgNum-valiNum
-errordot=np.zeros((loop,1))
+errordot=np.zeros((loop*epoch,1))
 
-for k in range(1):
+for k in range(epoch):
     overallError=0
     for j in range(loop):
         X=Xa[j]
@@ -170,8 +168,8 @@ for k in range(1):
     
         #backward propagation
         error=p3-yy
-        errordot[j]=-math.log(p3[0, y[0]])
-        overallError+=errordot[j]
+        errordot[k*loop+j]=-math.log(p3[0, y[0]])
+        overallError+=errordot[k*loop+j]
         
         #print 'delta3=',delta3.shape,'weight2.T=',weight2.T.shape,'f2=',f2.shape
         delta3=error#*gprime
@@ -204,14 +202,14 @@ for k in range(1):
     #plt.plot(range(loop), errordot, "o")
     #plt.show()
 #print 'overallerror=',overallError
-#plt.plot(range(loop), errordot, "o")
+#plt.plot(range(epoch*loop), errordot)
 #plt.show()
   
 
 print 'train finish'
 
-imagef.close()
-labelf.close()
+#imagef.close()
+#labelf.close()
 #recordf_0 = open('/home/rdeng/code/mine/nn/myparam0', 'wb')
 #recordf_1 = open('/home/rdeng/code/mine/nn/myparam1', 'wb')
 #recordf_2 = open('/home/rdeng/code/mine/nn/myparam2', 'wb')
