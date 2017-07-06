@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 
+import mynn_base as mybs
+import mynn_utils as myutils
 np.random.seed(0)
 ## compute sigmoid nonlinearity
 def sigmoid(x):
@@ -54,8 +56,8 @@ def forwardProp(X, weight, activate_func):
     Res1 = activate_func(Z1)
     return Res1
 
-def normalize(X):
-    return (X-np.mean(X))/np.std(X)
+# def normalize(X):
+#     return (X-np.mean(X))/np.std(X)
 
 def predict(Xi, Yi, weight1, weight2):
     num=Yi.size
@@ -82,26 +84,26 @@ def predict(Xi, Yi, weight1, weight2):
     print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, accuracy, '%'
     return accuracy
 
-def loadImgData(imgfile, imgNum, count, offset):
-    if count > imgNum:
-        print 'count=',count,' > ','imgNum=', imgNum
-        count=imgNum
-    Xa=np.zeros((count, imgRow*imgCol))
-    imgfile.seek(offset*imgRow*imgCol+16)
-    for i in range(count):
-        Xa[i, range(imgRow*imgCol)]=np.fromfile(imgfile, np.uint8, imgRow*imgCol)
-    return Xa
+# def loadImgData(imgfile, imgNum, count, offset):
+#     if count > imgNum:
+#         print 'count=',count,' > ','imgNum=', imgNum
+#         count=imgNum
+#     Xa=np.zeros((count, imgRow*imgCol))
+#     imgfile.seek(offset*imgRow*imgCol+16)
+#     for i in range(count):
+#         Xa[i, range(imgRow*imgCol)]=np.fromfile(imgfile, np.uint8, imgRow*imgCol)
+#     return Xa
 
-def loadLabelData(lblfile, imgNum, count, offset):
+# def loadLabelData(lblfile, imgNum, count, offset):
     
-    if count > lblNum:
-        print 'count=',count,' > ','lblNum=', lblNum
-        count=imgNum
-    Ya=np.zeros((count, 1))
-    lblfile.seek(offset+8)
-    for i in range(count):
-        Ya[i, 0]=np.fromfile(lblfile, np.uint8, 1)
-    return Ya
+#     if count > lblNum:
+#         print 'count=',count,' > ','lblNum=', lblNum
+#         count=imgNum
+#     Ya=np.zeros((count, 1))
+#     lblfile.seek(offset+8)
+#     for i in range(count):
+#         Ya[i, 0]=np.fromfile(lblfile, np.uint8, 1)
+#     return Ya
 
 alpha = 0.003
 lamda = 0.1#alpha*alpha
@@ -115,36 +117,15 @@ weight2 = np.random.uniform(-0.1,0.1,(hidden_dim1+1,output_dim))
 
 bias_1=np.zeros((1, hidden_dim1))
 bias_2=np.zeros((1, output_dim))
-#bias_2=np.zeros((1, output_dim))
+
 d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
-#d2=np.zeros(weight2.shape)
 
-#Xa=sigmoid(Xa)
-#Xa=Xa/255
-#Xa=(Xa-np.mean(Xa))/np.std(Xa)
-imgfile = open('./data/train-images-idx3-ubyte', 'rb')
-magic, imgNum, imgRow, imgCol = struct.unpack(">IIII", imgfile.read(16))
-print 'Image File: magic=', magic, 'imgNum=', imgNum, 'imgRow=', imgRow, 'imgCol=', imgCol
-lblfile = open('./data/train-labels-idx1-ubyte', 'rb')
-magic, lblNum = struct.unpack(">II", lblfile.read(8))
-print 'Label File: magic=', magic, 'lblNum=', lblNum
 
-valiNum=10000
-trainNum=imgNum-valiNum
-Xa=loadImgData(imgfile, imgNum, trainNum, 0)
-Ya=loadLabelData(lblfile, lblNum, trainNum, 0)
-Xv=loadImgData(imgfile, imgNum, valiNum, trainNum)
-Yv=loadLabelData(lblfile, lblNum, valiNum, trainNum)
-imgfile.close()
-lblfile.close()
-#for i in range(10):
-    #img=Xa[i].reshape(imgRow, imgCol)
-    #showImg(img)
-    #print 'Ya[',i,']=', Ya[i]
-Xa=normalize(Xa)
-Xv=normalize(Xv)
-
+imgNum, imgRow, imgCol, lblNum, Xa, Ya = myutils.loadMNISTData()
+valiNum=int(imgNum/10)
+Xv=Xa[imgNum-valiNum-1:imgNum,:]
+Yv=Ya[lblNum-valiNum-1:lblNum,:]
 
 
 print '----finish read data----'
@@ -234,7 +215,7 @@ for i in range(timgNum):
     Yt[i, 0]=np.fromfile(tlabelf, np.uint8, 1)
 #Xt=sigmoid(Xt)
 #Xt=(Xt-np.mean(Xt))/np.std(Xt)
-Xt=normalize(Xt)
+Xt=mybs.normalize(Xt)
 test_accuracy=predict(Xt, Yt, weight1, weight2)
 
     
