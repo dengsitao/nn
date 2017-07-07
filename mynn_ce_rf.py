@@ -30,6 +30,9 @@ def softmax_deri(signal):
     J[:, iy, ix] = signal * (1. - signal) # diagonal
     return J.sum(axis=1) # sum across-rows for each sample
 
+def blank_deri(x):
+    return x
+
 def relu(x):
     return np.maximum(x, 0)
 
@@ -81,29 +84,8 @@ def predict(Xi, Yi, weight1, weight2):
             wrongSum+=1
 
     accuracy=rightSum/num
-    print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, accuracy, '%'
+    print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, accuracy*100, '%'
     return accuracy
-
-# def loadImgData(imgfile, imgNum, count, offset):
-#     if count > imgNum:
-#         print 'count=',count,' > ','imgNum=', imgNum
-#         count=imgNum
-#     Xa=np.zeros((count, imgRow*imgCol))
-#     imgfile.seek(offset*imgRow*imgCol+16)
-#     for i in range(count):
-#         Xa[i, range(imgRow*imgCol)]=np.fromfile(imgfile, np.uint8, imgRow*imgCol)
-#     return Xa
-
-# def loadLabelData(lblfile, imgNum, count, offset):
-    
-#     if count > lblNum:
-#         print 'count=',count,' > ','lblNum=', lblNum
-#         count=imgNum
-#     Ya=np.zeros((count, 1))
-#     lblfile.seek(offset+8)
-#     for i in range(count):
-#         Ya[i, 0]=np.fromfile(lblfile, np.uint8, 1)
-#     return Ya
 
 alpha = 0.003
 lamda = 0.1#alpha*alpha
@@ -121,12 +103,13 @@ bias_2=np.zeros((1, output_dim))
 d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
 
-
 imgNum, imgRow, imgCol, lblNum, Xa, Ya = myutils.loadMNISTData()
 valiNum=int(imgNum/10)
 Xv=Xa[imgNum-valiNum-1:imgNum,:]
 Yv=Ya[lblNum-valiNum-1:lblNum,:]
 
+layer1=mybs.layer(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
+layer2=mybs.layer(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
 
 print '----finish read data----'
 epoch=3
@@ -140,9 +123,11 @@ for k in range(epoch):
         X=X.reshape(1,imgRow*imgCol)
         y=Ya[j]
         #Forward propagation
-        a2=forwardProp(X, weight1, sigmoid)
+        #a2=forwardProp(X, weight1, sigmoid)
+        a2=layer1.forward_prop(X)
 
-        p3=forwardProp(a2, weight2, softmax)
+        #p3=forwardProp(a2, weight2, softmax)
+        p3=layer2.forward_prop(a2)
 
         yy=np.zeros((1, output_dim))
         yy[0.0,y[0]]=1.0
@@ -152,31 +137,13 @@ for k in range(epoch):
         errordot[k*loop+j]=-math.log(p3[0, y[0]])
         overallError+=errordot[k*loop+j]
         
-        #print 'delta3=',delta3.shape,'weight2.T=',weight2.T.shape,'f2=',f2.shape
-        delta3=error#*gprime
-        w2=weight2[1:,:]
-        w2=w2.reshape(hidden_dim1, output_dim)
-        #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
-        delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
-        #print 'delta2=',delta2.shape,'weight2.T=',weight2.T.shape,'a3=',a3.shape
-        #delta1=np.dot(delta2, weight1.T)*sigm_deri(a2)
-        #print 'd2=',d2.shape,'delta3.T=',delta3.T.shape,'f2=',f2.shape
-        #print 'weight2=',weight2.shape,'d2=',d2.shape,'delta3.T=',delta3.T.shape,'a2=', a2.shape
-        a21=np.c_[[1], a2]
-        d2=np.dot(delta3.T, a21).T
-        #dbias_1=delta2
-        #print 'weight1=',weight1.shape,'d1=',d1.shape,'delta2.T=',delta2.T.shape,'a1=', a1.shape
-        #delta2=delta2[:,1:]
-        #delta2=delta2.reshape(1, hidden_dim1)
-        a1=np.c_[[1],X]
-        d1=np.dot(delta2.T, a1).T
-        #weight1-=alpha*(d1)#+lamda*weight1)
-        #weight2-=alpha*(d2)#+lamda*weight2)
-        weight1-=alpha*(d1)#+lamda*weight1)
-        weight2-=alpha*(d2)#+lamda*weight2)
+        delta1=layer2.backward_prop(error)
+        delta=layer1.backward_prop(delta1)
+
     print '----train: ',k,' finish----'
     print 'overallerror=',overallError
-    accuracy=predict(Xv, Yv, weight1, weight2)
+    #accuracy=predict(Xv, Yv, weight1, weight2)
+    accuracy=predict(Xv, Yv, layer1.lyr_weight, layer2.lyr_weight)
 
     if (accuracy > 0.95):
         break
@@ -216,7 +183,6 @@ for i in range(timgNum):
 #Xt=sigmoid(Xt)
 #Xt=(Xt-np.mean(Xt))/np.std(Xt)
 Xt=mybs.normalize(Xt)
-test_accuracy=predict(Xt, Yt, weight1, weight2)
-
+test_accuracy=predict(Xt, Yt, layer1.lyr_weight, layer2.lyr_weight)
     
 
