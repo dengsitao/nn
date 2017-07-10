@@ -35,3 +35,20 @@ class layer:
 		self.lyr_weight-=self.alpha*(d2)
 		return self.delta2
 
+class layer_param:
+	def __init__(self, input_dim, output_dim, act_func, act_deri, alpha):
+		self.input_dim=input_dim
+		self.output_dim=output_dim
+		self.act_func=act_func
+		self.act_deri=act_deri
+		self.alpha=alpha
+
+class nnetwork:
+	def __init__(self, X, Y, layer_num, layer_param):
+		self.X=X
+		self.Y=Y
+		self.layer_num=layer_num
+		self.layers=[]
+		for i in range(layer_num):
+			self.layers.append(layer(layer_param[i].input_dim, layer_param[i].output_dim, layer_param[i].act_func, layer_param[i].act_deri, layer_param[i].alpha))
+			self.layers[i].weights=np.random.uniform(-0.1,0.1,(layer_param[i].input_dim+1,layer_param[i].output_dim))

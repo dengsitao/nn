@@ -103,13 +103,43 @@ bias_2=np.zeros((1, output_dim))
 d1=np.zeros(weight1.shape)
 d2=np.zeros(weight2.shape)
 
-imgNum, imgRow, imgCol, lblNum, Xa, Ya = myutils.loadMNISTData()
+imgNum, imgRow, imgCol, Xa = myutils.load_image_data('./data/train-images-idx3-ubyte', 0)
+lblNum, Ya = myutils.load_label_data('./data/train-labels-idx1-ubyte',0)
+Xa=mybs.normalize(Xa)
+# print 'X1', imgNum1, imgRow1, imgCol1, Xa1.shape, 'Y1', lblNum1, Ya1.shape
+# imgNum, imgRow, imgCol, lblNum, Xa, Ya = myutils.loadMNISTData()
+# print 'X', imgNum, imgRow, imgCol, Xa.shape, 'Y', lblNum, Ya.shape
+# for i in range(10):
+#     img=Xa[i].reshape(imgRow, imgCol)
+#     showImg(img)
+#     print 'Ya[',i,']=', Ya[i]
+# for i in range(imgNum):
+#     for j in range(imgRow*imgCol):
+#         if Xa1[i,j] == Xa[i,j]:
+#             continue
+#         else:
+#             print 'Xa[',i,',',j,'] !=', 'Xa1[',i,',',j,']'
+#             print 'Xa=', Xa[i,:]
+#             print 'Xa1', Xa1[i,:]
+#             raw_input('wait')
+
+#     if Ya1[i] != Ya[i]:
+#         print 'Ya[',i,'] !=', 'Ya1[',i,']'
+#         print 'Ya=', Ya[i]
+#         print 'Ya1', Ya1[i]
+
+
 valiNum=int(imgNum/10)
 Xv=Xa[imgNum-valiNum-1:imgNum,:]
 Yv=Ya[lblNum-valiNum-1:lblNum,:]
 
 layer1=mybs.layer(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
 layer2=mybs.layer(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
+
+layer_param1=mybs.layer_param(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
+layer_param2=mybs.layer_param(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
+layer_param=[layer_param1, layer_param2]
+nnetwork = mybs.nnetwork(Xa, Ya, 2, layer_param)
 
 print '----finish read data----'
 epoch=3
@@ -121,6 +151,7 @@ for k in range(epoch):
     for j in range(loop):
         X=Xa[j]
         X=X.reshape(1,imgRow*imgCol)
+        #print 'Xa.shape=',Xa[j].shape,'X.shape=',X.shape
         y=Ya[j]
         #Forward propagation
         #a2=forwardProp(X, weight1, sigmoid)
