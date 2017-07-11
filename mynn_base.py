@@ -44,11 +44,66 @@ class layer_param:
 		self.alpha=alpha
 
 class nnetwork:
-	def __init__(self, X, Y, layer_num, layer_param):
-		self.X=X
-		self.Y=Y
+	def __init__(self, X, Y, sample_num, layer_num, layer_param, input_dim, output_dim):
+        self.train_num=sample_num*9/10
+        self.validate_num=sample_num/10
+        self.trainX=X[0:self.train_num,:]
+        self.trainY=Y[0:self.train_num,:]
+        self.validateX=Xa[self.train_num:sample_num,:]
+        self.validateY=Ya[self.train_num:sample_num,:]
 		self.layer_num=layer_num
 		self.layers=[]
 		for i in range(layer_num):
 			self.layers.append(layer(layer_param[i].input_dim, layer_param[i].output_dim, layer_param[i].act_func, layer_param[i].act_deri, layer_param[i].alpha))
 			self.layers[i].weights=np.random.uniform(-0.1,0.1,(layer_param[i].input_dim+1,layer_param[i].output_dim))
+        self.sample_size=input_dim
+        self.output_dim=output_dim
+        
+    def train():
+        for i in range(self.sample_num):
+            X=self.trainX[i]
+            X=X.reshape(1, self.sample_size)
+            y=self.trainY[i]
+            yy=np.zeros((1, self.output_dim))
+            yy[0, y[0]]=1.0
+            for j in range(self.layer_num):
+                X=self.layers[j].forward_prop(X)
+            error=X-yy
+            delta=error
+            for j in xrange(self.layer_num):
+                delta=self.layers[j].backward_prop(delta)
+        print '----training finish----'
+        validate()
+
+    def validate():
+        right=0
+        wrong=0
+        for i in range(self.validate_num):
+            X=self.validateX[i]
+            X=X.reshape(1, self.sample_size)
+            y=self.validateY[i]
+            yy=np.zeros((1, self.output_dim))
+            yy[0, y[0]]=1.0
+            for j in range(self.layer_num):
+                X=self.layers[j].forward_prop(X)
+            index=np.argmax(X)
+            if index==y:
+                right+=1
+            else:
+                wrong+=1
+        print '----training finish----'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
