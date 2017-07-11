@@ -1,9 +1,11 @@
+from __future__ import division
 import struct
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
+import time,datetime
 
 np.random.seed(0)
 ## compute sigmoid nonlinearity
@@ -109,8 +111,9 @@ valiNum=10000
 loop=imgNum-valiNum
 errordot=np.zeros((loop,1))
 
-for k in range(30):
+for k in range(3):
     overallError=0
+    time1=time.time()
     for j in range(loop):
         X=Xa[j]
         X=X.reshape(1,imgRow*imgCol)
@@ -152,6 +155,11 @@ for k in range(30):
         w2=w2.reshape(hidden_dim1, output_dim)
         #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
         delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
+
+        # w1=weight1[1:,:]
+        # w1=w1.reshape(input_dim, hidden_dim1)
+        # delta1=np.dot(delta2, w1.T)*sigm_deri(X)
+
         #print 'delta2=',delta2.shape,'weight2.T=',weight2.T.shape,'a3=',a3.shape
         #delta1=np.dot(delta2, weight1.T)*sigm_deri(a2)
         #print 'd2=',d2.shape,'delta3.T=',delta3.T.shape,'f2=',f2.shape
@@ -167,9 +175,11 @@ for k in range(30):
         weight1-=alpha*(d1)#+lamda*weight1)
         weight2-=alpha*(d2)#+lamda*weight2)
     print '----train: ',k,' finish----'
+    print 'training',k,' use ',time.time()-time1
     print 'overallerror=',overallError
     rightSum=0
     wrongSum=0
+    time1=time.time()
     for j in range(valiNum):
     #for j in range(1):
         #read a 28x28 image and a byte label
@@ -195,8 +205,8 @@ for k in range(30):
             rightSum+=1
         else:
             wrongSum+=1
-    
-    print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, rightSum/valiNum, '%'
+    print 'validating',k,' use ',time.time()-time1
+    print 'train',k,' right: ',rightSum,'Wrong: ',wrongSum, 'accuracy=',rightSum/valiNum, '%'
     if (rightSum/valiNum > 0.95):
         break
     #plt.plot(range(loop), errordot, "o")
