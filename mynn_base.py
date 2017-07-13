@@ -84,7 +84,13 @@ class nnetwork:
                 delta=error
                 for j in range(self.layer_num):
                     #print 'backward prop ',j,' delta.shape=',delta.shape
-                    self.layers[self.layer_num-j-1].backward_prop(delta)
+                    # self.layers[self.layer_num-j-1].backward_prop(delta)
+
+                    a21=np.c_[[1], self.layers[self.layer_num-j-1].X]
+                    d2=np.dot(delta.T, a21).T
+                    #print  'input_dim=',self.layers[self.layer_num-j-1].input_dim,'output_dim=',self.layers[self.layer_num-j-1].output_dim,'lyr_weight.shape=',self.layers[self.layer_num-j-1].lyr_weight.shape,'d2.shape=',d2.shape,'alpha.shape=',self.layers[self.layer_num-j-1].alpha
+                    self.layers[self.layer_num-j-1].lyr_weight-=self.layers[self.layer_num-j-1].alpha*(d2)
+
                     if j != self.layer_num-1:
                         delta=self.layers[self.layer_num-j-1].calc_delta(delta)
             print 'training',k,' use ',time.time()-time1

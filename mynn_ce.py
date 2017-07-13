@@ -154,6 +154,7 @@ for k in range(3):
         w2=weight2[1:,:]
         w2=w2.reshape(hidden_dim1, output_dim)
         #print  'delta3=',delta3.T,'w2.T=',w2.T.shape,'a2=',a2.shape
+        #print 'back prop'
         delta2=np.dot(delta3, w2.T)*sigm_deri(a2)
 
         # w1=weight1[1:,:]
