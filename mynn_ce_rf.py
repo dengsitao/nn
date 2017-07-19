@@ -76,6 +76,7 @@ def predict(Xi, Yi, weight1, weight2):
         #y=Ya[j+imgNum-valiNum]
         #Forward propagation
         a2=forwardProp(X, weight1, sigmoid)
+        #a2=forwardProp(X, weight1, relu)
         a3=forwardProp(a2, weight2, softmax)
         indexd=np.argmax(a3)
         if indexd==y:
@@ -128,16 +129,20 @@ Xa=mybs.normalize(Xa)
 #         print 'Ya=', Ya[i]
 #         print 'Ya1', Ya1[i]
 
-epoch=2
+epoch=10
 valiNum=int(imgNum/10)
 Xv=Xa[imgNum-valiNum-1:imgNum,:]
 Yv=Ya[lblNum-valiNum-1:lblNum,:]
 
-layer1=mybs.layer(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
-layer2=mybs.layer(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
+# layer1=mybs.layer(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
+# layer2=mybs.layer(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
+
+
 
 layer_param1=mybs.layer_param(input_dim, hidden_dim1, sigmoid, sigm_deri, alpha)
 layer_param2=mybs.layer_param(hidden_dim1, output_dim, softmax, sigm_deri, alpha)
+# layer_param1=mybs.layer_param(input_dim, hidden_dim1, relu, relu_deri, alpha)
+# layer_param2=mybs.layer_param(hidden_dim1, output_dim, softmax, relu_deri, alpha)
 layer_param=[layer_param1, layer_param2]
 nnetwork = mybs.nnetwork(Xa, Ya, imgNum, 2, layer_param, input_dim, output_dim, epoch)
 
@@ -219,6 +224,10 @@ for i in range(timgNum):
 #Xt=sigmoid(Xt)
 #Xt=(Xt-np.mean(Xt))/np.std(Xt)
 Xt=mybs.normalize(Xt)
-test_accuracy=predict(Xt, Yt, layer1.lyr_weight, layer2.lyr_weight)
+# test_accuracy=predict(Xt, Yt, nnetwork.layers[0].lyr_weight, nnetwork.layers[1].lyr_weight)
+right_num, wrong_num = nnetwork.predict(Xt, Yt, timgNum)
+test_accuracy=right_num/(right_num+wrong_num)
+
+print 'test accuracy=', test_accuracy
     
 

@@ -84,12 +84,12 @@ class nnetwork:
                 delta=error
                 for j in range(self.layer_num):
                     #print 'backward prop ',j,' delta.shape=',delta.shape
-                    self.layers[self.layer_num-j-1].backward_prop(delta)
+                    # self.layers[self.layer_num-j-1].backward_prop(delta)
 
-                    # a21=np.c_[[1], self.layers[self.layer_num-j-1].X]
-                    # d2=np.dot(delta.T, a21).T
-                    # #print  'input_dim=',self.layers[self.layer_num-j-1].input_dim,'output_dim=',self.layers[self.layer_num-j-1].output_dim,'lyr_weight.shape=',self.layers[self.layer_num-j-1].lyr_weight.shape,'d2.shape=',d2.shape,'alpha.shape=',self.layers[self.layer_num-j-1].alpha
-                    # self.layers[self.layer_num-j-1].lyr_weight-=self.layers[self.layer_num-j-1].alpha*(d2)
+                    a21=np.c_[[1], self.layers[self.layer_num-j-1].X]
+                    d2=np.dot(delta.T, a21).T
+                    #print  'input_dim=',self.layers[self.layer_num-j-1].input_dim,'output_dim=',self.layers[self.layer_num-j-1].output_dim,'lyr_weight.shape=',self.layers[self.layer_num-j-1].lyr_weight.shape,'d2.shape=',d2.shape,'alpha.shape=',self.layers[self.layer_num-j-1].alpha
+                    self.layers[self.layer_num-j-1].lyr_weight-=self.layers[self.layer_num-j-1].alpha*(d2)
 
                     if j != self.layer_num-1:
                         delta=self.layers[self.layer_num-j-1].calc_delta(delta)
@@ -120,6 +120,25 @@ class nnetwork:
                 wrong+=1
         accuracy=right/self.validate_num
         return accuracy
+
+    def predict(self, Xp, Yp, sample_num):
+        right_num=0
+        wrong_num=0
+        for i in range(sample_num):
+            X=Xp[i]
+            X=X.reshape(1, self.sample_size)
+            y=Yp[i]
+            yy=np.zeros((1, self.output_dim))
+            yy[0, y[0]]=1.0
+            for j in range(self.layer_num):
+                    #print 'forward prop ',j,' X.shape=',X.shape
+                    X=self.layers[j].forward_prop(X)
+            pred_y=np.argmax(X)
+            if pred_y==y:
+                right_num+=1
+            else:
+                wrong_num+=1
+        return right_num, wrong_num
 
         
 
